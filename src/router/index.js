@@ -19,6 +19,11 @@ const router = createRouter({
       component: () => import('../views/RegionalIndustryDetailView.vue'),
     },
     {
+      path: '/regional-case-studies',
+      name: 'regional-case-studies',
+      component: () => import('../views/RegionalCaseStudyView.vue'),
+    },
+    {
       path: '/national-map',
       name: 'national-map',
       component: () => import('../views/NationalMapView.vue'),

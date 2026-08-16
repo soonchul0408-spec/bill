@@ -49,6 +49,12 @@ onMounted(() => {
 
 <template>
   <div class="regional-page">
+    <nav class="analysis-tabs" aria-label="지역산업 분석 카테고리">
+      <a href="/regional-industry" class="is-active" aria-current="page">지역별 산업</a>
+      <a href="/legislation">법안별</a>
+      <a href="/regional-case-studies">과거 사례 연구</a>
+    </nav>
+
     <section class="regional-hero">
       <div class="hero-copy">
         <p class="eyebrow">REGIONAL INDUSTRY INSIGHT</p>
@@ -176,6 +182,26 @@ onMounted(() => {
   max-width: 1240px;
   margin: 0 auto;
   padding: 56px 24px 88px;
+}
+
+.analysis-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.analysis-tabs a {
+  padding: 9px 14px;
+  border-radius: 999px;
+  color: #61718a;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.analysis-tabs a.is-active {
+  color: #fff;
+  background: #1d4ed8;
 }
 
 .regional-hero {
