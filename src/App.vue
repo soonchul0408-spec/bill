@@ -1,16 +1,18 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
 
 const isLanding = computed(() => route.path === '/')
+const mobileMenuOpen = ref(false)
 
 const activeMenu = computed(() => {
   if (route.path.startsWith('/national-map')) return '/national-map'
   if (route.path.startsWith('/regional-industry')) return '/regional-industry'
   if (route.path.startsWith('/legislation')) return '/legislation'
+  if (route.path.startsWith('/case-studies')) return '/case-studies'
   if (route.path.startsWith('/my-analysis')) return '/my-analysis'
   if (route.path === '/about') return '/about'
   return '/regional-industry'
@@ -18,6 +20,11 @@ const activeMenu = computed(() => {
 
 function handleMenuSelect(path) {
   if (path !== route.path) router.push(path)
+}
+
+function handleMobileMenuSelect(path) {
+  handleMenuSelect(path)
+  mobileMenuOpen.value = false
 }
 </script>
 
@@ -33,6 +40,11 @@ function handleMenuSelect(path) {
           </span>
         </router-link>
 
+        <el-button class="mobile-menu-trigger" plain @click="mobileMenuOpen = true">
+          <span aria-hidden="true">☰</span>
+          메뉴
+        </el-button>
+
         <el-menu
           :default-active="activeMenu"
           mode="horizontal"
@@ -43,11 +55,28 @@ function handleMenuSelect(path) {
           <el-menu-item index="/regional-industry">지역산업 분석</el-menu-item>
           <el-menu-item index="/national-map">전국 지도</el-menu-item>
           <el-menu-item index="/legislation">법안·입법예고</el-menu-item>
+          <el-menu-item index="/case-studies">케이스 스터디</el-menu-item>
           <el-menu-item index="/my-analysis">내 분석</el-menu-item>
-          <el-menu-item index="/about">소개</el-menu-item>
         </el-menu>
       </div>
     </header>
+
+    <el-drawer v-model="mobileMenuOpen" direction="ltr" size="280px" class="mobile-nav-drawer">
+      <template #header>
+        <router-link to="/" class="drawer-brand" @click="mobileMenuOpen = false">
+          <span class="brand-mark">RI</span>
+          <strong>지역산업 인사이트</strong>
+        </router-link>
+      </template>
+      <p class="drawer-description">어디를 확인할지 선택하세요.</p>
+      <el-menu :default-active="activeMenu" class="drawer-menu" @select="handleMobileMenuSelect">
+        <el-menu-item index="/regional-industry">지역산업 분석</el-menu-item>
+        <el-menu-item index="/national-map">전국 지도</el-menu-item>
+        <el-menu-item index="/legislation">법안·입법예고</el-menu-item>
+        <el-menu-item index="/case-studies">케이스 스터디</el-menu-item>
+        <el-menu-item index="/my-analysis">내 분석</el-menu-item>
+      </el-menu>
+    </el-drawer>
 
     <main class="app-content" :class="{ 'app-content--landing': isLanding }">
       <router-view />
@@ -130,6 +159,51 @@ function handleMenuSelect(path) {
   background: transparent;
 }
 
+.mobile-menu-trigger {
+  display: none;
+  font-weight: 700;
+}
+
+.mobile-menu-trigger span {
+  margin-right: 3px;
+  font-size: 1rem;
+}
+
+.drawer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #172033;
+}
+
+.drawer-brand strong {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.drawer-description {
+  margin: 0 0 18px;
+  color: #7b8799;
+  font-size: 0.82rem;
+}
+
+.drawer-menu {
+  border-right: 0;
+}
+
+:deep(.drawer-menu .el-menu-item) {
+  height: 48px;
+  margin-bottom: 4px;
+  border-radius: 10px;
+  color: #526176;
+  font-weight: 700;
+}
+
+:deep(.drawer-menu .el-menu-item.is-active) {
+  color: #2563eb;
+  background: #eff6ff;
+}
+
 :deep(.site-nav .el-menu-item) {
   height: 72px;
   color: #68748a;
@@ -155,19 +229,24 @@ function handleMenuSelect(path) {
 
 @media (max-width: 680px) {
   .site-header__inner {
-    align-items: flex-start;
-    display: grid;
-    gap: 4px;
-    padding: 14px 18px 0;
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    max-width: none;
+    min-height: 64px;
+    padding: 0 18px;
   }
 
-  .site-nav,
-  :deep(.site-nav .el-menu-item) {
-    height: 48px;
+  .brand-copy small {
+    display: none;
   }
 
-  :deep(.site-nav .el-menu-item) {
-    padding: 0 12px;
+  .site-nav {
+    display: none;
+  }
+
+  .mobile-menu-trigger {
+    display: inline-flex;
   }
 }
 </style>

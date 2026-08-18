@@ -18,6 +18,9 @@ function createEmptyState() {
     savedCompanyIds: [],
     projectNotes: {},
     companyWeights: {},
+    researchChecklists: {},
+    savedResearchCandidates: [],
+    videoResearchNotes: [],
   }
 }
 
@@ -42,6 +45,16 @@ function readSavedState() {
         savedState.companyWeights && typeof savedState.companyWeights === 'object'
           ? savedState.companyWeights
           : {},
+      researchChecklists:
+        savedState.researchChecklists && typeof savedState.researchChecklists === 'object'
+          ? savedState.researchChecklists
+          : {},
+      savedResearchCandidates: Array.isArray(savedState.savedResearchCandidates)
+        ? savedState.savedResearchCandidates
+        : [],
+      videoResearchNotes: Array.isArray(savedState.videoResearchNotes)
+        ? savedState.videoResearchNotes
+        : [],
     }
   } catch {
     return createEmptyState()
@@ -55,6 +68,9 @@ export const useAnalysisStore = defineStore('analysis', () => {
   const savedCompanyIds = ref(savedState.savedCompanyIds)
   const projectNotes = ref(savedState.projectNotes)
   const companyWeights = ref(savedState.companyWeights)
+  const researchChecklists = ref(savedState.researchChecklists)
+  const savedResearchCandidates = ref(savedState.savedResearchCandidates)
+  const videoResearchNotes = ref(savedState.videoResearchNotes)
 
   function persist() {
     if (typeof window === 'undefined') return
@@ -68,6 +84,9 @@ export const useAnalysisStore = defineStore('analysis', () => {
           savedCompanyIds: savedCompanyIds.value,
           projectNotes: projectNotes.value,
           companyWeights: companyWeights.value,
+          researchChecklists: researchChecklists.value,
+          savedResearchCandidates: savedResearchCandidates.value,
+          videoResearchNotes: videoResearchNotes.value,
         }),
       )
     } catch {
@@ -76,7 +95,16 @@ export const useAnalysisStore = defineStore('analysis', () => {
   }
 
   watch(
-    [savedRegions, savedProjectIds, savedCompanyIds, projectNotes, companyWeights],
+    [
+      savedRegions,
+      savedProjectIds,
+      savedCompanyIds,
+      projectNotes,
+      companyWeights,
+      researchChecklists,
+      savedResearchCandidates,
+      videoResearchNotes,
+    ],
     persist,
     { deep: true },
   )
@@ -150,12 +178,74 @@ export const useAnalysisStore = defineStore('analysis', () => {
     }
   }
 
+  function isResearchCheckComplete(caseId, checkId) {
+    return Boolean(researchChecklists.value[caseId]?.[checkId])
+  }
+
+  function toggleResearchCheck(caseId, checkId) {
+    if (!caseId || !checkId) return
+
+    researchChecklists.value = {
+      ...researchChecklists.value,
+      [caseId]: {
+        ...researchChecklists.value[caseId],
+        [checkId]: !researchChecklists.value[caseId]?.[checkId],
+      },
+    }
+  }
+
+  function isResearchCandidateSaved(candidateId) {
+    return savedResearchCandidates.value.some((candidate) => candidate.id === candidateId)
+  }
+
+  function toggleResearchCandidate(candidate) {
+    if (!candidate?.id) return
+
+    savedResearchCandidates.value = isResearchCandidateSaved(candidate.id)
+      ? savedResearchCandidates.value.filter((item) => item.id !== candidate.id)
+      : [...savedResearchCandidates.value, candidate]
+  }
+
+  function saveVideoResearchNote(note) {
+    const id = note?.id || `video-note-${Date.now()}`
+    const nextNote = {
+      id,
+      sourceName: String(note?.sourceName ?? '').trim(),
+      sourceUrl: String(note?.sourceUrl ?? '').trim(),
+      watchedAt: String(note?.watchedAt ?? ''),
+      companyName: String(note?.companyName ?? '').trim(),
+      reviewStatus: String(note?.reviewStatus ?? '기록만'),
+      claim: String(note?.claim ?? '').trim(),
+      verifiedFacts: String(note?.verifiedFacts ?? '').trim(),
+      concerns: String(note?.concerns ?? '').trim(),
+      nextChecks: String(note?.nextChecks ?? '').trim(),
+      linkedCaseId: String(note?.linkedCaseId ?? ''),
+      linkedProjectId: String(note?.linkedProjectId ?? ''),
+      verificationChecks:
+        note?.verificationChecks && typeof note.verificationChecks === 'object'
+          ? { ...note.verificationChecks }
+          : {},
+      updatedAt: new Date().toISOString(),
+    }
+
+    videoResearchNotes.value = videoResearchNotes.value.some((item) => item.id === id)
+      ? videoResearchNotes.value.map((item) => (item.id === id ? { ...item, ...nextNote } : item))
+      : [{ ...nextNote, createdAt: nextNote.updatedAt }, ...videoResearchNotes.value]
+  }
+
+  function removeVideoResearchNote(noteId) {
+    videoResearchNotes.value = videoResearchNotes.value.filter((note) => note.id !== noteId)
+  }
+
   return {
     savedRegions,
     savedProjectIds,
     savedCompanyIds,
     projectNotes,
     companyWeights,
+    researchChecklists,
+    savedResearchCandidates,
+    videoResearchNotes,
     toggleRegion,
     isRegionSaved,
     toggleProject,
@@ -166,5 +256,11 @@ export const useAnalysisStore = defineStore('analysis', () => {
     updateProjectNote,
     getCompanyWeight,
     setCompanyWeight,
+    isResearchCheckComplete,
+    toggleResearchCheck,
+    isResearchCandidateSaved,
+    toggleResearchCandidate,
+    saveVideoResearchNote,
+    removeVideoResearchNote,
   }
 })

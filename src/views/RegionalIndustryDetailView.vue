@@ -63,6 +63,15 @@ function toggleRegion() {
   if (item.value) analysisStore.toggleRegion(item.value.region)
 }
 
+function goToCaseStudies() {
+  if (!item.value) return
+
+  router.push({
+    name: 'case-studies',
+    query: { category: item.value.category, region: item.value.region },
+  })
+}
+
 onMounted(() => {
   void dataStore.load()
 })
@@ -158,6 +167,7 @@ onMounted(() => {
             >
               공식 출처 열기 ↗
             </el-button>
+            <el-button type="warning" plain @click="goToCaseStudies">유사 사례로 검토하기</el-button>
             <el-button plain @click="goBack">목록으로 돌아가기</el-button>
           </div>
         </el-card>

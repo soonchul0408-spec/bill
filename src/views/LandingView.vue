@@ -15,47 +15,16 @@ function goTo(path) {
         <span class="landing-intro__dot" aria-hidden="true"></span>
         지역산업 정보 분석 플랫폼
       </div>
-      <h1 id="landing-title">어디에서 시작할까요?</h1>
-      <p>지역별 정보 또는 최신 법안 정보를 선택해 바로 확인하세요.</p>
+      <h1 id="landing-title">정책을 보고, 내 판단 근거를 쌓습니다.</h1>
+      <p>아래 순서대로 보면 복잡한 정보도 차분하게 정리할 수 있어요.</p>
     </section>
 
     <section class="entry-options" aria-label="정보 시작점 선택">
       <div class="entry-options__grid">
-        <el-card class="entry-card entry-card--region" shadow="hover" @click="goTo('/national-map')">
-          <div class="entry-card__topline">
-            <el-tag type="primary" effect="light">지역별 정보</el-tag>
-            <span class="entry-card__number">01</span>
-          </div>
-          <div class="entry-card__visual entry-card__visual--map" aria-hidden="true">
-            <span class="map-shape map-shape--one"></span>
-            <span class="map-shape map-shape--two"></span>
-            <span class="map-shape map-shape--three"></span>
-            <span class="map-pin">⌖</span>
-          </div>
-          <h3>전국 지도에서 지역 선택</h3>
-          <p>
-            대한민국 시·도를 선택해 해당 지역의 정책·예산·사업, 관련 산업과 공개자료 기반
-            관련 기업 정보를 확인합니다.
-          </p>
-          <div class="entry-card__audience">
-            <strong>이런 분께 추천</strong>
-            <span>관심 지역의 정책·예산·사업 흐름을 한곳에서 비교하고 싶은 분</span>
-          </div>
-          <ul class="entry-card__features">
-            <li>지역별 사업 규모와 진행 단계</li>
-            <li>산업 카테고리별 관련 정보</li>
-            <li>선택 지역 상세 화면으로 이동</li>
-          </ul>
-          <el-button type="primary" class="entry-card__button" @click.stop="goTo('/national-map')">
-            지역별 정보 보기
-            <span aria-hidden="true">→</span>
-          </el-button>
-        </el-card>
-
         <el-card class="entry-card entry-card--latest" shadow="hover" @click="goTo('/legislation')">
           <div class="entry-card__topline">
-            <el-tag type="success" effect="light">최신 정보</el-tag>
-            <span class="entry-card__number">02</span>
+            <el-tag type="success" effect="light">첫 번째</el-tag>
+            <span class="entry-card__number">01</span>
           </div>
           <div class="entry-card__visual entry-card__visual--timeline" aria-hidden="true">
             <span class="timeline-line"></span>
@@ -66,26 +35,73 @@ function goTo(path) {
             <span class="timeline-label timeline-label--two">심사</span>
             <span class="timeline-label timeline-label--three">진행</span>
           </div>
-          <h3>최근 발의·진행 중인 법안 확인</h3>
-          <p>
-            최근 제안된 법안과 심사 진행 정보를 중심으로 확인하고, 관심 지역과 산업을 기준으로
-            필요한 내용을 골라봅니다.
-          </p>
-          <div class="entry-card__audience entry-card__audience--latest">
-            <strong>이런 분께 추천</strong>
-            <span>최근 발의·심사 중인 법안의 변화와 산업 연관성을 빠르게 확인하고 싶은 분</span>
-          </div>
+          <h3>최근 법안과 정책 확인</h3>
+          <p>새로 나온 법안의 단계와 공식 출처를 먼저 확인합니다.</p>
           <ul class="entry-card__features">
-            <li>제안일과 현재 진행 단계</li>
-            <li>관심 지역·산업 카테고리 필터</li>
-            <li>공식 출처와 확인 날짜</li>
+            <li>발의일과 현재 진행 단계</li>
+            <li>관심 지역·산업으로 좁혀 보기</li>
           </ul>
           <el-button type="success" plain class="entry-card__button" @click.stop="goTo('/legislation')">
-            최신 법안 보기
+            최근 법안 보기
+            <span aria-hidden="true">→</span>
+          </el-button>
+        </el-card>
+
+        <el-card class="entry-card entry-card--region" shadow="hover" @click="goTo('/national-map')">
+          <div class="entry-card__topline">
+            <el-tag type="primary" effect="light">두 번째</el-tag>
+            <span class="entry-card__number">02</span>
+          </div>
+          <div class="entry-card__visual entry-card__visual--map" aria-hidden="true">
+            <span class="map-shape map-shape--one"></span>
+            <span class="map-shape map-shape--two"></span>
+            <span class="map-shape map-shape--three"></span>
+            <span class="map-pin">⌖</span>
+          </div>
+          <h3>지역 사업과 산업 흐름 확인</h3>
+          <p>관심 지역의 정책·예산·사업과 산업 맥락을 함께 봅니다.</p>
+          <ul class="entry-card__features">
+            <li>지역별 사업 규모와 진행 단계</li>
+            <li>공개자료와 연결 근거 확인</li>
+          </ul>
+          <el-button type="primary" class="entry-card__button" @click.stop="goTo('/national-map')">
+            지역별 정보 보기
+            <span aria-hidden="true">→</span>
+          </el-button>
+        </el-card>
+
+        <el-card class="entry-card entry-card--research" shadow="hover" @click="goTo('/case-studies')">
+          <div class="entry-card__topline">
+            <el-tag type="warning" effect="light">세 번째</el-tag>
+            <span class="entry-card__number">03</span>
+          </div>
+          <div class="entry-card__visual entry-card__visual--research" aria-hidden="true">
+            <span class="research-node research-node--one"></span>
+            <span class="research-node research-node--two"></span>
+            <span class="research-node research-node--three"></span>
+            <span class="research-line research-line--one"></span>
+            <span class="research-line research-line--two"></span>
+          </div>
+          <h3>과거 사례와 비교하기</h3>
+          <p>비슷한 과거 사례를 보고, 무엇을 더 확인해야 할지 정리합니다.</p>
+          <ul class="entry-card__features">
+            <li>정책 이벤트별 공식 출처</li>
+            <li>직접 참여와 산업 연관을 구분</li>
+          </ul>
+          <el-button type="warning" plain class="entry-card__button" @click.stop="goTo('/case-studies')">
+            케이스 스터디 보기
             <span aria-hidden="true">→</span>
           </el-button>
         </el-card>
       </div>
+
+      <el-card class="personal-research-cta" shadow="never">
+        <div>
+          <strong>마지막은 내 분석에 기록하세요.</strong>
+          <span>확인한 사실과 보류 조건을 남기면 다음에 다시 볼 때 도움이 됩니다.</span>
+        </div>
+        <el-button type="success" @click="goTo('/my-analysis')">내 분석 열기 →</el-button>
+      </el-card>
     </section>
   </div>
 </template>
@@ -146,7 +162,7 @@ function goTo(path) {
 
 .entry-options__grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: stretch;
   gap: 20px;
   max-width: 1040px;
@@ -156,7 +172,7 @@ function goTo(path) {
 .entry-card {
   position: relative;
   overflow: hidden;
-  min-height: 500px;
+  min-height: 425px;
   border: 1px solid #e7ebf2;
   border-radius: 20px;
   cursor: pointer;
@@ -173,6 +189,10 @@ function goTo(path) {
 
 .entry-card--latest:hover {
   border-color: #a7e8d0;
+}
+
+.entry-card--research:hover {
+  border-color: #f7c968;
 }
 
 :deep(.entry-card .el-card__body) {
@@ -258,6 +278,39 @@ function goTo(path) {
   background: linear-gradient(135deg, #effcf7, #f4fbff);
 }
 
+.entry-card__visual--research {
+  background: linear-gradient(135deg, #fff8e8, #f5f9ff);
+}
+
+.research-node,
+.research-line {
+  position: absolute;
+  display: block;
+}
+
+.research-node {
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  border: 6px solid #fff;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 0 2px #fcd34d;
+}
+
+.research-node--one { top: 50px; left: 16%; }
+.research-node--two { top: 22px; left: calc(50% - 14px); background: #2563eb; box-shadow: 0 0 0 2px #93b4ff; }
+.research-node--three { top: 58px; right: 16%; background: #10b981; box-shadow: 0 0 0 2px #6ee7b7; }
+
+.research-line {
+  height: 3px;
+  transform-origin: left center;
+  background: linear-gradient(90deg, #fbbf24, #60a5fa);
+}
+
+.research-line--one { top: 62px; left: 22%; width: 31%; transform: rotate(-18deg); }
+.research-line--two { top: 42px; left: 52%; width: 30%; transform: rotate(20deg); background: linear-gradient(90deg, #60a5fa, #34d399); }
+
 .timeline-line {
   position: absolute;
   top: 54px;
@@ -331,39 +384,10 @@ function goTo(path) {
   line-height: 1.65;
 }
 
-.entry-card__audience {
-  display: grid;
-  gap: 4px;
-  min-height: 62px;
-  margin-top: 16px;
-  padding: 12px 14px;
-  border-left: 3px solid #93b4ff;
-  border-radius: 0 10px 10px 0;
-  background: #f6f8ff;
-}
-
-.entry-card__audience--latest {
-  border-left-color: #6ee7b7;
-  background: #f1fcf7;
-}
-
-.entry-card__audience strong {
-  color: #334155;
-  font-size: 0.76rem;
-  font-weight: 800;
-}
-
-.entry-card__audience span {
-  color: #68758a;
-  font-size: 0.78rem;
-  letter-spacing: -0.025em;
-  line-height: 1.5;
-}
-
 .entry-card__features {
   display: grid;
   gap: 7px;
-  margin: 20px 0 25px;
+  margin: 18px 0 25px;
   padding: 0;
   color: #4d5c73;
   font-size: 0.83rem;
@@ -392,6 +416,52 @@ function goTo(path) {
   font-size: 1.1rem;
 }
 
+.personal-research-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  max-width: 1040px;
+  margin: 20px auto 0;
+  border: 1px solid #bbf7d0;
+  border-radius: 16px;
+  background: #f0fdf4;
+}
+
+.personal-research-cta :deep(.el-card__body) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  padding: 18px 22px;
+}
+
+.personal-research-cta div {
+  display: grid;
+  gap: 4px;
+}
+
+.personal-research-cta strong {
+  color: #166534;
+  font-size: 0.98rem;
+}
+
+.personal-research-cta span {
+  color: #4b6b5a;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 980px) and (min-width: 761px) {
+  .entry-options__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .entry-card--research {
+    grid-column: span 2;
+  }
+}
+
 @media (max-width: 760px) {
   .landing-page {
     width: min(100% - 32px, 560px);
@@ -412,6 +482,11 @@ function goTo(path) {
 
   .entry-card {
     min-height: 0;
+  }
+
+  .personal-research-cta :deep(.el-card__body) {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>

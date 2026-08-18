@@ -39,6 +39,16 @@ const router = createRouter({
       component: () => import('../views/LegislationView.vue'),
     },
     {
+      path: '/case-studies',
+      name: 'case-studies',
+      component: () => import('../views/CaseStudyListView.vue'),
+    },
+    {
+      path: '/case-studies/:id',
+      name: 'case-study-detail',
+      component: () => import('../views/CaseStudyView.vue'),
+    },
+    {
       path: '/my-analysis',
       name: 'my-analysis',
       component: () => import('../views/MyAnalysisView.vue'),
