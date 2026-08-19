@@ -31,8 +31,13 @@ function getResponseResult(raw) {
 }
 
 function formatAmount(value) {
-  const amount = Number(String(value ?? '').replace(/[^0-9.-]/g, ''))
+  const amount = toAmount(value)
   return Number.isFinite(amount) ? `${amount.toLocaleString('ko-KR')}원` : '공개자료 확인 필요'
+}
+
+function toAmount(value) {
+  const amount = Number(String(value ?? '').replace(/[^0-9.-]/g, ''))
+  return Number.isFinite(amount) ? amount : 0
 }
 
 function createItemId(row, index) {
@@ -46,8 +51,10 @@ function createItemId(row, index) {
 }
 
 function mapExpenditureRow(row, index, retrievedAt) {
-  const budget = formatAmount(row?.bdg_cash_amt)
-  const expenditure = formatAmount(row?.ep_amt)
+  const budgetAmount = toAmount(row?.bdg_cash_amt)
+  const expenditureAmount = toAmount(row?.ep_amt)
+  const budget = formatAmount(budgetAmount)
+  const expenditure = formatAmount(expenditureAmount)
   const executionDate = String(row?.exe_ymd ?? '')
   const source = {
     provider: '행정안전부 지방재정365',
@@ -66,6 +73,8 @@ function mapExpenditureRow(row, index, retrievedAt) {
     projectName: row?.dbiz_nm || '세부사업명 미상',
     category: row?.fld_nm || '재정 집행',
     scale: `예산현액 ${budget} · 지출액 ${expenditure}`,
+    budgetAmount,
+    expenditureAmount,
     stage: '집행',
     stageNote: [row?.acnt_dv_nm, row?.part_nm].filter(Boolean).join(' · ') || '세부사업별 세출현황',
     description: `${row?.laf_hg_nm || row?.wa_laf_hg_nm || '지방자치단체'}의 ${executionDate || '기준일 미상'} 세부사업별 세출 공개자료입니다.`,

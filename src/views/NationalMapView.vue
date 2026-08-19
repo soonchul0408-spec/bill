@@ -6,6 +6,7 @@ import DataOriginBadge from '@/components/regional/DataOriginBadge.vue'
 import NationalKoreaMap from '@/components/nationalMap/NationalKoreaMap.vue'
 import NationalMapFilters from '@/components/nationalMap/NationalMapFilters.vue'
 import RegionalInsightPanel from '@/components/nationalMap/RegionalInsightPanel.vue'
+import { getNationalRegionId } from '@/data/nationalMapData'
 import { useNationalMapStore } from '@/stores/nationalMap'
 
 const router = useRouter()
@@ -17,6 +18,56 @@ const topRegions = computed(() =>
     .sort((left, right) => right.projectCount - left.projectCount)
     .slice(0, 5),
 )
+
+const regionalScores = computed(() => {
+  const advancedStages = new Set(['사업자 선정', '착공', '집행'])
+
+  return mapStore.mapRegions
+    .map((region) => {
+      const projects = mapStore.filteredProjects.filter(
+        (project) => getNationalRegionId(project.region) === region.id,
+      )
+      const bills = mapStore.filteredBills.filter(
+        (bill) => getNationalRegionId(bill.region) === region.id,
+      )
+      const fiscalRecords = projects.filter((project) => project.recordType === '재정 집행')
+      const projectRecords = projects.filter((project) => project.recordType !== '재정 집행')
+      const budgetAmount = fiscalRecords.reduce((total, record) => total + (Number(record.budgetAmount) || 0), 0)
+      const expenditureAmount = fiscalRecords.reduce(
+        (total, record) => total + (Number(record.expenditureAmount) || 0),
+        0,
+      )
+      const fiscalRate = budgetAmount > 0 ? Math.min(100, Math.round((expenditureAmount / budgetAmount) * 100)) : null
+      const stageScore = Math.min(
+        100,
+        projectRecords.filter((project) => advancedStages.has(project.stage)).length * 35,
+      )
+      const execution = fiscalRate === null ? stageScore : Math.round(stageScore * 0.45 + fiscalRate * 0.55)
+      const policy = Math.min(100, projectRecords.length * 18 + bills.length * 12)
+      const evidence = Math.min(
+        100,
+        projectRecords.filter((project) => (project.relatedCompanyIds ?? []).length > 0).length * 35,
+      )
+      const allRecords = [...projects, ...bills]
+      const confirmedRecords = allRecords.filter((record) => ['live', 'mixed'].includes(record.dataOrigin)).length
+      const confidence = allRecords.length ? Math.round((confirmedRecords / allRecords.length) * 100) : 0
+      const total = Math.round(policy * 0.35 + execution * 0.3 + evidence * 0.2 + confidence * 0.15)
+
+      return {
+        ...region,
+        total,
+        policy,
+        execution,
+        evidence,
+        confidence,
+        fiscalRate,
+        projectCount: projectRecords.length,
+        billCount: bills.length,
+      }
+    })
+    .filter((region) => region.total || region.projectCount || region.billCount)
+    .sort((left, right) => right.total - left.total || right.confidence - left.confidence)
+})
 
 function openRegion(regionId) {
   mapStore.selectRegion(regionId)
@@ -83,6 +134,9 @@ onMounted(() => {
         <button type="button" :class="{ 'national-view-menu__item--active': activeView === 'briefing' }" @click="selectView('briefing')">
           통합 분석
         </button>
+        <button type="button" :class="{ 'national-view-menu__item--active': activeView === 'comparison' }" @click="selectView('comparison')">
+          비교 기준
+        </button>
       </nav>
 
       <section v-if="activeView === 'map'" class="map-layout map-layout--single">
@@ -126,6 +180,60 @@ onMounted(() => {
             description="현재 조건에 맞는 사업 공개자료가 없습니다."
           />
           <p class="rank-help">지도 또는 지역명을 선택하면 지역별 통합 화면으로 이동합니다.</p>
+        </el-card>
+      </section>
+
+      <section v-else-if="activeView === 'comparison'" class="comparison-layout">
+        <el-alert
+          title="지역 비교는 투자 추천 점수가 아닙니다."
+          type="info"
+          :closable="false"
+          show-icon
+          description="공개자료의 정책·실행·기업 근거·데이터 신뢰도를 같은 기준으로 정리한 탐색용 지표입니다."
+        />
+
+        <el-card class="comparison-card" shadow="never">
+          <template #header>
+            <div class="card-header">
+              <div>
+                <p class="section-eyebrow">COMPARISON METHOD</p>
+                <h2>지역·산업 비교 기준</h2>
+              </div>
+              <el-tag type="warning" effect="plain">필터 적용 결과</el-tag>
+            </div>
+          </template>
+
+          <div class="method-list">
+            <div><strong>정책 모멘텀 35%</strong><span>사업·법안 공개 건수</span></div>
+            <div><strong>실행 공개도 30%</strong><span>사업 단계와 예산 대비 지출액</span></div>
+            <div><strong>기업 근거 20%</strong><span>사업에 연결된 관련 기업 근거</span></div>
+            <div><strong>데이터 신뢰도 15%</strong><span>실시간·검증 자료 비중</span></div>
+          </div>
+          <p class="comparison-note">시장 반응은 정책과 종목이 직접 연결된 사례에서만 별도로 보여주며, 지역 점수에는 포함하지 않습니다.</p>
+
+          <div class="comparison-list">
+            <button
+              v-for="(region, index) in regionalScores"
+              :key="region.id"
+              type="button"
+              class="comparison-row"
+              @click="openRegion(region.id)"
+            >
+              <span class="comparison-rank">{{ index + 1 }}</span>
+              <span class="comparison-name">
+                <strong>{{ region.label }}</strong>
+                <small>사업 {{ region.projectCount }} · 법안 {{ region.billCount }}{{ region.fiscalRate === null ? '' : ` · 집행률 ${region.fiscalRate}%` }}</small>
+              </span>
+              <span class="comparison-bars" aria-hidden="true">
+                <i class="comparison-bar comparison-bar--policy" :style="{ width: `${region.policy}%` }"></i>
+                <i class="comparison-bar comparison-bar--execution" :style="{ width: `${region.execution}%` }"></i>
+                <i class="comparison-bar comparison-bar--evidence" :style="{ width: `${region.evidence}%` }"></i>
+                <i class="comparison-bar comparison-bar--confidence" :style="{ width: `${region.confidence}%` }"></i>
+              </span>
+              <span class="comparison-score">{{ region.total }}<small>/100</small></span>
+            </button>
+          </div>
+          <el-empty v-if="!regionalScores.length" :image-size="70" description="현재 필터에 맞는 비교 대상이 없습니다." />
         </el-card>
       </section>
 
@@ -346,6 +454,131 @@ onMounted(() => {
   line-height: 1.5;
 }
 
+.comparison-layout {
+  display: grid;
+  gap: 16px;
+  max-width: 860px;
+  margin: 24px auto 0;
+}
+
+.comparison-card {
+  border: 1px solid #e5eaf2;
+  border-radius: 20px;
+}
+
+.method-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.method-list div {
+  display: grid;
+  gap: 5px;
+  padding: 13px;
+  border-radius: 12px;
+  background: #f8fbff;
+}
+
+.method-list strong {
+  color: #1e3a8a;
+  font-size: 0.75rem;
+}
+
+.method-list span,
+.comparison-note {
+  color: #64748b;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.comparison-note {
+  margin: 14px 0 0;
+}
+
+.comparison-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.comparison-row {
+  display: grid;
+  grid-template-columns: 28px minmax(125px, .9fr) minmax(150px, 1.35fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #edf0f5;
+  border-radius: 12px;
+  color: #334155;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+}
+
+.comparison-row:hover,
+.comparison-row:focus-visible {
+  border-color: #93c5fd;
+  background: #f8fbff;
+  outline: none;
+}
+
+.comparison-rank {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 50%;
+  color: #1d4ed8;
+  background: #eff6ff;
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+.comparison-name {
+  display: grid;
+  gap: 4px;
+}
+
+.comparison-name strong { font-size: .84rem; }
+.comparison-name small { color: #64748b; font-size: .7rem; }
+
+.comparison-bars {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  align-items: end;
+  height: 26px;
+}
+
+.comparison-bar {
+  display: block;
+  min-width: 4px;
+  height: 5px;
+  border-radius: 999px;
+  transform-origin: left;
+}
+
+.comparison-bar--policy { background: #2563eb; }
+.comparison-bar--execution { background: #0f766e; }
+.comparison-bar--evidence { background: #9333ea; }
+.comparison-bar--confidence { background: #d97706; }
+
+.comparison-score {
+  color: #172554;
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: -.05em;
+}
+
+.comparison-score small {
+  margin-left: 2px;
+  color: #94a3b8;
+  font-size: .65rem;
+  letter-spacing: 0;
+}
+
 @media (max-width: 900px) {
   .map-layout,
   .loading-layout {
@@ -369,5 +602,9 @@ onMounted(() => {
   }
 
   .national-view-menu { overflow-x: auto; }.national-view-menu button { flex: 0 0 auto; min-width: 126px; }
+
+  .method-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .comparison-row { grid-template-columns: 28px minmax(0, 1fr) auto; }
+  .comparison-bars { display: none; }
 }
 </style>
