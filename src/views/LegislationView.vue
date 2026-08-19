@@ -4,6 +4,7 @@ import ApiFallbackNotice from '@/components/regional/ApiFallbackNotice.vue'
 import DataOriginBadge from '@/components/regional/DataOriginBadge.vue'
 import LegislationCard from '@/components/regional/LegislationCard.vue'
 import LegislationFilters from '@/components/regional/LegislationFilters.vue'
+import LegislationTimeline from '@/components/regional/LegislationTimeline.vue'
 import { SAVED_REGION_FILTER } from '@/data/legislationData'
 import { useAnalysisStore } from '@/stores/analysis'
 import { useLegislationStore } from '@/stores/legislation'
@@ -11,6 +12,8 @@ import { useLegislationStore } from '@/stores/legislation'
 const selectedRegion = ref('전체')
 const selectedCategory = ref('전체')
 const selectedStage = ref('전체')
+const selectedTimelineItem = ref(null)
+const isTimelineDetailOpen = ref(false)
 const analysisStore = useAnalysisStore()
 const dataStore = useLegislationStore()
 
@@ -26,25 +29,37 @@ const filterRegionOptions = computed(() => {
   return [interestOption, ...dataStore.regionOptions]
 })
 
+function matchesBaseFilters(item) {
+  const matchesRegion =
+    selectedRegion.value === '전체' ||
+    (selectedRegion.value === SAVED_REGION_FILTER
+      ? analysisStore.savedRegions.includes(item.region)
+      : item.region === selectedRegion.value)
+  const matchesCategory = selectedCategory.value === '전체' || item.category === selectedCategory.value
+  return matchesRegion && matchesCategory
+}
+
 const filteredItems = computed(() =>
   dataStore.items
-    .filter((item) => {
-      const matchesRegion =
-        selectedRegion.value === '전체' ||
-        (selectedRegion.value === SAVED_REGION_FILTER
-          ? analysisStore.savedRegions.includes(item.region)
-          : item.region === selectedRegion.value)
-      const matchesCategory =
-        selectedCategory.value === '전체' || item.category === selectedCategory.value
-      const matchesStage = selectedStage.value === '전체' || item.stage === selectedStage.value
-
-      return matchesRegion && matchesCategory && matchesStage
-    })
+    .filter((item) => matchesBaseFilters(item) && (selectedStage.value === '전체' || item.stage === selectedStage.value))
     .sort((a, b) => {
       const aDate = Number(String(a.proposedAt ?? '').replaceAll('.', '')) || 0
       const bDate = Number(String(b.proposedAt ?? '').replaceAll('.', '')) || 0
       return bDate - aDate
     }),
+)
+
+const stageMenuItems = computed(() =>
+  dataStore.stages
+    .filter((stage) => stage.value !== '전체')
+    .map((stage) => ({
+      ...stage,
+      count: dataStore.items.filter((item) => matchesBaseFilters(item) && item.stage === stage.value).length,
+    })),
+)
+
+const resultsTitle = computed(() =>
+  selectedStage.value === '전체' ? '법안 진행 정보' : `${selectedStage.value} 단계 예시`,
 )
 
 const activeRegionLabel = computed(() => {
@@ -62,8 +77,23 @@ function resetFilters() {
   selectedStage.value = '전체'
 }
 
+function selectStageMenu(stage) {
+  selectedStage.value = stage
+}
+
 function handleRegionUpdate(value) {
   selectedRegion.value = value
+}
+
+function openTimelineDetail(item) {
+  selectedTimelineItem.value = item
+  isTimelineDetailOpen.value = true
+}
+
+function openTimelineSource() {
+  if (selectedTimelineItem.value?.sourceUrl) {
+    window.open(selectedTimelineItem.value.sourceUrl, '_blank', 'noopener,noreferrer')
+  }
 }
 
 onMounted(() => {
@@ -131,7 +161,7 @@ onMounted(() => {
       <div class="section-heading">
         <div>
           <p class="section-eyebrow">PUBLIC LEGISLATION DATA</p>
-          <h2>법안 진행 정보</h2>
+          <h2>{{ resultsTitle }}</h2>
         </div>
         <div class="results-heading__meta">
           <el-tag type="success" effect="plain">최근 제안일 순</el-tag>
@@ -139,24 +169,103 @@ onMounted(() => {
         </div>
       </div>
 
+      <section class="stage-menu-section" aria-label="법안 진행 단계 메뉴">
+        <div class="stage-menu-heading">
+          <div>
+            <p>PROGRESS MENU</p>
+            <h3>진행 단계를 선택해 예시 보기</h3>
+          </div>
+          <button
+            type="button"
+            class="stage-menu-all"
+            :class="{ 'stage-menu-all--active': selectedStage === '전체' }"
+            @click="selectStageMenu('전체')"
+          >전체 보기</button>
+        </div>
+        <div class="stage-menu-grid">
+          <button
+            v-for="stage in stageMenuItems"
+            :key="stage.value"
+            type="button"
+            class="stage-menu-item"
+            :class="{ 'stage-menu-item--active': selectedStage === stage.value }"
+            @click="selectStageMenu(stage.value)"
+          >
+            <span>{{ stage.label }}</span>
+            <strong>{{ stage.count }}<small>건</small></strong>
+            <small>{{ stage.count ? '예시 보기' : '자료 없음' }}</small>
+          </button>
+        </div>
+      </section>
+
+      <el-empty
+        v-if="dataStore.status !== 'loading' && selectedStage === '전체'"
+        class="stage-selection-empty"
+        :image-size="66"
+        description="진행 단계를 선택하면 해당 단계의 법안 예시와 시계열을 볼 수 있습니다."
+      />
+
+      <LegislationTimeline
+        v-else-if="dataStore.status !== 'loading' && filteredItems.length"
+        class="timeline-section"
+        :items="filteredItems"
+        @select="openTimelineDetail"
+      />
+
       <div v-if="dataStore.status === 'loading'" class="card-grid loading-grid" aria-busy="true">
         <el-card v-for="index in 4" :key="index" class="skeleton-card" shadow="never">
           <el-skeleton animated :rows="7" />
         </el-card>
       </div>
 
-      <div v-else-if="filteredItems.length" class="card-grid">
-        <LegislationCard v-for="item in filteredItems" :key="item.id" :item="item" />
+      <div v-else-if="selectedStage !== '전체' && filteredItems.length" class="card-grid">
+        <LegislationCard v-for="item in filteredItems" :key="item.id" :item="item" @select="openTimelineDetail" />
       </div>
 
       <el-empty
-        v-else
+        v-else-if="selectedStage !== '전체'"
         class="empty-state"
         description="선택한 관심 지역·산업·진행 단계에 맞는 공개자료가 없습니다."
       >
         <el-button type="primary" plain @click="resetFilters">필터 초기화</el-button>
       </el-empty>
     </section>
+
+    <el-dialog
+      v-model="isTimelineDetailOpen"
+      class="timeline-detail-dialog"
+      :title="selectedTimelineItem?.billName"
+      width="min(680px, calc(100% - 32px))"
+    >
+      <template v-if="selectedTimelineItem">
+        <div class="timeline-detail-meta">
+          <el-tag type="info" effect="plain">{{ selectedTimelineItem.recordType }}</el-tag>
+          <el-tag effect="plain">{{ selectedTimelineItem.category }}</el-tag>
+          <el-tag type="warning" effect="dark">{{ selectedTimelineItem.stage }}</el-tag>
+        </div>
+        <dl class="timeline-detail-grid">
+          <div><dt>제안일</dt><dd>{{ selectedTimelineItem.proposedAt }}</dd></div>
+          <div><dt>지역</dt><dd>{{ selectedTimelineItem.region }}</dd></div>
+          <div><dt>제안자</dt><dd>{{ selectedTimelineItem.proposer }}</dd></div>
+          <div><dt>소관기관</dt><dd>{{ selectedTimelineItem.responsibleOrg }}</dd></div>
+        </dl>
+        <section class="timeline-detail-copy">
+          <h3>핵심 내용</h3>
+          <p>{{ selectedTimelineItem.description }}</p>
+          <h3>진행 단계 근거</h3>
+          <p>{{ selectedTimelineItem.stageNote }}</p>
+        </section>
+        <ol class="timeline-detail-events">
+          <li v-for="event in selectedTimelineItem.timeline" :key="`${event.date}-${event.title}`">
+            <time>{{ event.date }}</time><strong>{{ event.title }}</strong><span>{{ event.description }}</span>
+          </li>
+        </ol>
+        <div class="timeline-detail-actions">
+          <el-button @click="isTimelineDetailOpen = false">닫기</el-button>
+          <el-button v-if="selectedTimelineItem.sourceUrl" type="primary" @click="openTimelineSource">공식 출처 열기</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -298,6 +407,32 @@ onMounted(() => {
   margin-top: 54px;
 }
 
+.timeline-section {
+  margin-top: 32px;
+}
+
+.stage-menu-section {
+  margin-top: 32px;
+  padding: 24px;
+  border: 1px solid #dbe7f3;
+  border-radius: 20px;
+  background: #fff;
+}
+
+.stage-menu-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.stage-menu-heading p { margin: 0 0 7px; color: #2563eb; font-size: .68rem; font-weight: 900; letter-spacing: .14em; }
+.stage-menu-heading h3 { margin: 0; color: #172554; font-size: 1.05rem; letter-spacing: -.045em; }
+.stage-menu-all { padding: 8px 11px; border: 1px solid #dbe7f3; border-radius: 9px; color: #64748b; background: #fff; font-size: .74rem; font-weight: 800; cursor: pointer; }.stage-menu-all--active { border-color: #1d4ed8; color: #fff; background: #1d4ed8; }
+.stage-menu-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 9px; }.stage-menu-item { display: grid; gap: 7px; min-height: 118px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 13px; color: #64748b; background: #f8fafc; text-align: left; cursor: pointer; }.stage-menu-item:hover { border-color: #93c5fd; background: #f8fbff; }.stage-menu-item--active { border-color: #2563eb; background: #eff6ff; box-shadow: 0 6px 14px rgb(37 99 235 / 10%); }.stage-menu-item > span { color: #334155; font-size: .78rem; font-weight: 800; }.stage-menu-item strong { color: #1d4ed8; font-size: 1.55rem; letter-spacing: -.07em; line-height: 1; }.stage-menu-item strong small { margin-left: 2px; font-size: .72rem; letter-spacing: 0; }.stage-menu-item > small { color: #94a3b8; font-size: .68rem; }
+.stage-selection-empty { min-height: 170px; margin-top: 18px; border: 1px dashed #d6deec; border-radius: 16px; background: #fbfdff; }
+
 .section-heading {
   display: flex;
   align-items: flex-end;
@@ -343,6 +478,47 @@ onMounted(() => {
   background: #fff;
 }
 
+.timeline-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.timeline-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.timeline-detail-grid > div {
+  padding: 12px;
+  border-radius: 10px;
+  background: #f7f9fc;
+}
+
+.timeline-detail-grid dt {
+  color: #8a96aa;
+  font-size: .7rem;
+  font-weight: 700;
+}
+
+.timeline-detail-grid dd {
+  margin: 5px 0 0;
+  color: #26344d;
+  font-size: .82rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.timeline-detail-copy { display: grid; gap: 6px; }
+.timeline-detail-copy h3 { margin: 8px 0 0; color: #334155; font-size: .84rem; }
+.timeline-detail-copy p { margin: 0; color: #5f6d83; font-size: .82rem; line-height: 1.65; }
+.timeline-detail-events { display: grid; gap: 8px; margin: 22px 0 0; padding: 0; list-style: none; }
+.timeline-detail-events li { display: grid; grid-template-columns: 92px 1fr; gap: 3px 12px; padding: 12px 0; border-top: 1px solid #edf1f6; }
+.timeline-detail-events time { grid-row: span 2; color: #2563eb; font-size: .76rem; font-weight: 800; }.timeline-detail-events strong { color: #334155; font-size: .8rem; }.timeline-detail-events span { color: #64748b; font-size: .74rem; line-height: 1.5; }
+.timeline-detail-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
+
 @media (max-width: 820px) {
   .legislation-hero {
     align-items: stretch;
@@ -352,6 +528,8 @@ onMounted(() => {
   .hero-summary {
     max-width: 280px;
   }
+
+  .stage-menu-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 @media (max-width: 680px) {
@@ -371,6 +549,10 @@ onMounted(() => {
   .card-grid {
     grid-template-columns: 1fr;
   }
+
+  .timeline-detail-grid { grid-template-columns: 1fr; }
+
+  .stage-menu-heading { align-items: start; }
 }
 
 @media (max-width: 520px) {
@@ -378,5 +560,8 @@ onMounted(() => {
     align-items: flex-start;
     display: grid;
   }
+
+  .stage-menu-section { padding: 18px; }
+  .stage-menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 </style>

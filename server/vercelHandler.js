@@ -47,8 +47,8 @@ export function createVercelApiHandler(pathname) {
       )
     }
 
-    const result = await resolveApiRequest(pathname)
+    const requestUrl = new URL(request.url)
+    const result = await resolveApiRequest(pathname, requestUrl.searchParams)
     return jsonResponse(result.payload, result.statusCode, corsHeaders)
   }
 }
-

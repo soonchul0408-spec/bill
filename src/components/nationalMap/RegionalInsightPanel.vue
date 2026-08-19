@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import DataOriginBadge from '@/components/regional/DataOriginBadge.vue'
 import LegislationCard from '@/components/regional/LegislationCard.vue'
@@ -11,6 +11,7 @@ import { useNationalMapStore } from '@/stores/nationalMap'
 const router = useRouter()
 const mapStore = useNationalMapStore()
 const analysisStore = useAnalysisStore()
+const activeSection = ref('projects')
 
 const industrySummary = computed(() =>
   [...new Set(
@@ -90,8 +91,19 @@ function openMyAnalysis() {
       <span v-if="!industrySummary.length" class="muted-copy">조건에 맞는 산업 정보가 없습니다.</span>
     </div>
 
-    <div class="content-grid">
-      <section class="content-section">
+    <nav class="briefing-menu" aria-label="지역 통합 분석 항목">
+      <button type="button" :class="{ 'briefing-menu__item--active': activeSection === 'projects' }" @click="activeSection = 'projects'">
+        정책·사업 <strong>{{ mapStore.filteredProjects.length }}</strong>
+      </button>
+      <button type="button" :class="{ 'briefing-menu__item--active': activeSection === 'bills' }" @click="activeSection = 'bills'">
+        법안·입법예고 <strong>{{ mapStore.filteredBills.length }}</strong>
+      </button>
+      <button type="button" :class="{ 'briefing-menu__item--active': activeSection === 'companies' }" @click="activeSection = 'companies'">
+        관련 기업 <strong>{{ mapStore.relatedCompanies.length }}</strong>
+      </button>
+    </nav>
+
+    <section v-if="activeSection === 'projects'" class="content-section briefing-content">
         <div class="section-heading">
           <div>
             <p class="section-eyebrow">POLICY &amp; PROJECT</p>
@@ -108,9 +120,9 @@ function openMyAnalysis() {
           />
         </div>
         <el-empty v-else description="선택한 지역과 조건에 맞는 정책·사업이 없습니다." />
-      </section>
+    </section>
 
-      <section class="content-section">
+    <section v-else-if="activeSection === 'bills'" class="content-section briefing-content">
         <div class="section-heading">
           <div>
             <p class="section-eyebrow">LEGISLATION</p>
@@ -127,10 +139,9 @@ function openMyAnalysis() {
           />
         </div>
         <el-empty v-else description="선택한 지역과 조건에 맞는 법안이 없습니다." />
-      </section>
-    </div>
+    </section>
 
-    <section class="company-section">
+    <section v-else class="company-section briefing-content">
       <div class="section-heading">
         <div>
           <p class="section-eyebrow">CONNECTED COMPANIES</p>
@@ -259,17 +270,12 @@ function openMyAnalysis() {
   font-weight: 700;
 }
 
-.content-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 28px;
-  margin-top: 42px;
-}
-
 .content-section,
 .company-section {
   min-width: 0;
 }
+
+.briefing-menu { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 32px; padding: 6px; border: 1px solid #dbe7f3; border-radius: 16px; background: #f8fbff; }.briefing-menu button { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 13px; border: 0; border-radius: 11px; color: #64748b; background: transparent; font-size: .8rem; font-weight: 800; cursor: pointer; }.briefing-menu button:hover { color: #1d4ed8; }.briefing-menu button strong { color: inherit; font-size: 1.05rem; }.briefing-menu .briefing-menu__item--active { color: #fff; background: #1d4ed8; box-shadow: 0 5px 12px rgb(29 78 216 / 18%); }.briefing-content { margin-top: 20px; }
 
 .section-heading {
   align-items: flex-end;
@@ -305,9 +311,6 @@ function openMyAnalysis() {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .content-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 640px) {
@@ -325,5 +328,7 @@ function openMyAnalysis() {
   .summary-grid {
     grid-template-columns: 1fr 1fr;
   }
+
+  .briefing-menu { grid-template-columns: 1fr; }
 }
 </style>

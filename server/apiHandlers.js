@@ -1,6 +1,7 @@
 import { fetchAssemblyBillPayload } from './providers/assemblyBillProvider.js'
 import { fetchDartCompanyPayload } from './providers/dartProvider.js'
 import { fetchRegionalIndustryPayload } from './providers/regionalIndustryProvider.js'
+import { fetchStockPricePayload } from './providers/stockPriceProvider.js'
 import { getProviderStatus } from './providers/providerRegistry.js'
 
 function logProviderFailure(provider, error) {
@@ -26,7 +27,7 @@ function providerFailure(provider, error, messages) {
   }
 }
 
-export async function resolveApiRequest(pathname) {
+export async function resolveApiRequest(pathname, searchParams = new URLSearchParams()) {
   if (pathname === '/api/health') {
     return {
       statusCode: 200,
@@ -82,9 +83,27 @@ export async function resolveApiRequest(pathname) {
     }
   }
 
+  if (pathname === '/api/stocks/prices') {
+    try {
+      const stockCode = String(searchParams.get('stockCode') ?? '005930')
+      if (!/^\d{6}$/.test(stockCode)) {
+        return {
+          statusCode: 400,
+          payload: { error: 'INVALID_STOCK_CODE', message: '6자리 종목코드가 필요합니다.' },
+        }
+      }
+      const payload = await fetchStockPricePayload({ stockCode })
+      return { statusCode: 200, payload: { ...payload, dataOrigin: 'live' } }
+    } catch (error) {
+      return providerFailure('stock-price-api', error, {
+        configuration: '주식시세 API 연결 설정이 없어 샘플 데이터를 표시합니다.',
+        upstream: '주식시세 API를 불러오지 못했습니다.',
+      })
+    }
+  }
+
   return {
     statusCode: 404,
     payload: { error: 'NOT_FOUND', message: '요청한 API 경로가 없습니다.' },
   }
 }
-

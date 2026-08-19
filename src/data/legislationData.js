@@ -15,7 +15,7 @@ export const LEGISLATION_INDUSTRY_CATEGORIES = INDUSTRY_CATEGORIES
 export const LEGISLATION_REGION_OPTIONS = REGION_OPTIONS
 export const SAVED_REGION_FILTER = '__saved_regions__'
 
-const ASSEMBLY_SOURCE_URL = 'https://www.data.go.kr/data/15126134/openapi.do'
+const ASSEMBLY_SOURCE_URL = 'https://opinion.lawmaking.go.kr/gcom/nsmLmSts/out'
 
 const SAMPLE_LEGISLATION_ITEMS = [
   {
@@ -35,7 +35,7 @@ const SAMPLE_LEGISLATION_ITEMS = [
     description:
       'AI 연구·서비스에 필요한 컴퓨팅 인프라와 데이터센터 지원 체계를 마련하는 내용을 담은 법안 예시입니다.',
     stageNote: '입법예고 단계의 샘플 기록입니다. 후속 심사·예산 여부는 별도 확인이 필요합니다.',
-    sourceTitle: '국회 국회사무처 의안정보 통합 API',
+    sourceTitle: '국민참여입법센터 국회입법현황',
     sourceDate: '2026.02.14',
     sourceUrl: ASSEMBLY_SOURCE_URL,
     timeline: [
@@ -70,7 +70,7 @@ const SAMPLE_LEGISLATION_ITEMS = [
     description:
       '첨단전략산업의 기반시설과 소재·부품·장비 생태계 지원을 강화하는 내용을 담은 법안 예시입니다.',
     stageNote: '상임위원회 심사 단계의 샘플 기록입니다.',
-    sourceTitle: '국회 국회사무처 의안정보 통합 API',
+    sourceTitle: '국민참여입법센터 국회입법현황',
     sourceDate: '2025.11.21',
     sourceUrl: ASSEMBLY_SOURCE_URL,
     timeline: [
@@ -105,7 +105,7 @@ const SAMPLE_LEGISLATION_ITEMS = [
     description:
       '방산 소재·부품과 지역 기업, 연구기관의 협력 기반을 지원하는 내용을 담은 법안 예시입니다.',
     stageNote: '본회의 심사 단계의 샘플 기록입니다.',
-    sourceTitle: '국회 국회사무처 의안정보 통합 API',
+    sourceTitle: '국민참여입법센터 국회입법현황',
     sourceDate: '2025.08.09',
     sourceUrl: ASSEMBLY_SOURCE_URL,
     timeline: [
@@ -140,7 +140,7 @@ const SAMPLE_LEGISLATION_ITEMS = [
     description:
       '이차전지 소재·부품·장비 기업의 연구개발과 공급망 협력을 지원하는 내용을 담은 법안 예시입니다.',
     stageNote: '제안일을 기준으로 발의 단계에 둔 샘플 기록입니다.',
-    sourceTitle: '국회 국회사무처 의안정보 통합 API',
+    sourceTitle: '국민참여입법센터 국회입법현황',
     sourceDate: '2026.06.03',
     sourceUrl: ASSEMBLY_SOURCE_URL,
     timeline: [
@@ -169,7 +169,7 @@ const SAMPLE_LEGISLATION_ITEMS = [
     description:
       '지역 전력망과 재생에너지 기반시설 확충을 지원하는 내용을 담은 법안 예시입니다.',
     stageNote: '통과로 표시된 샘플 상태이며, 개별 사업과 예산 편성 여부는 별도 자료입니다.',
-    sourceTitle: '국회 국회사무처 의안정보 통합 API',
+    sourceTitle: '국민참여입법센터 국회입법현황',
     sourceDate: '2024.04.17',
     sourceUrl: ASSEMBLY_SOURCE_URL,
     timeline: [
@@ -204,7 +204,7 @@ const SAMPLE_LEGISLATION_ITEMS = [
     description:
       '지역 이차전지 산업단지에 대한 투자와 기반시설 지원을 다루는 법안 예시입니다.',
     stageNote: '원본 처리 상태를 함께 확인해야 하는 샘플 단계입니다.',
-    sourceTitle: '국회 국회사무처 의안정보 통합 API',
+    sourceTitle: '국민참여입법센터 국회입법현황',
     sourceDate: '2023.09.12',
     sourceUrl: ASSEMBLY_SOURCE_URL,
     timeline: [

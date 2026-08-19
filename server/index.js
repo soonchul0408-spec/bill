@@ -39,7 +39,7 @@ const server = createServer(async (request, response) => {
     return
   }
 
-  const result = await resolveApiRequest(requestUrl.pathname)
+  const result = await resolveApiRequest(requestUrl.pathname, requestUrl.searchParams)
   sendJson(response, result.statusCode, result.payload)
 })
 

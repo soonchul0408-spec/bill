@@ -37,6 +37,11 @@ function formatPercent(value) {
   return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`
 }
 
+function formatDate(value) {
+  const text = String(value ?? '')
+  return text.length === 8 ? `${text.slice(0, 4)}.${text.slice(4, 6)}.${text.slice(6, 8)}` : text
+}
+
 function excessReturn(event, period) {
   return event.market[`return${period}`] - event.market[`marketReturn${period}`]
 }
@@ -60,6 +65,10 @@ function excessReturn(event, period) {
       <strong>→</strong>
       <span>기업·시장 반응</span>
     </div>
+    <p v-if="market.liveQuote" class="live-quote">
+      무료 주식시세 API 최신 종가: <strong>{{ formatPrice(market.liveQuote.close) }}</strong>
+      <span>({{ formatDate(market.liveQuote.date) }} · {{ market.liveQuote.companyName }})</span>
+    </p>
     <p class="event-chart-legend">
       <span aria-hidden="true"></span>
       각 점은 정책 이벤트 당일 종가입니다. 점선은 사건 순서를 잇는 표시이며, 연속 주가 시계열이 아닙니다.
@@ -126,6 +135,7 @@ function excessReturn(event, period) {
 .reaction-chart__header { display: flex; align-items: start; justify-content: space-between; gap: 16px; }.reaction-chart__header > div:first-child { display: grid; gap: 4px; }.reaction-chart__header strong { color: #1e3a5f; font-size: .93rem; }.reaction-chart__header small { color: #7c8da4; font-size: .74rem; }.source-links { display: grid; justify-items: end; gap: 5px; }.reaction-chart__header a { color: #2563eb; font-size: .72rem; font-weight: 800; white-space: nowrap; }
 .policy-impact-title { display: flex; align-items: center; gap: 9px; margin: 20px 0 10px; color: #1e3a5f; font-size: .84rem; font-weight: 800; }.policy-impact-title strong { color: #f59e0b; font-size: 1.2rem; }.policy-impact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }.policy-impact-card { display: grid; grid-template-columns: 1.15fr .85fr; overflow: hidden; border: 1px solid #dbeafe; border-radius: 13px; background: #fff; }.policy-event { display: grid; gap: 4px; padding: 13px; background: #eff6ff; }.policy-event span, .policy-result span { color: #64748b; font-size: .68rem; font-weight: 800; }.policy-event strong { color: #1e40af; font-size: .93rem; }.policy-event p { margin: 0; color: #475569; font-size: .72rem; line-height: 1.45; }.policy-result { display: grid; align-content: center; gap: 5px; padding: 13px; }.policy-result strong { color: #047857; font-size: .92rem; letter-spacing: -.04em; }.policy-result strong.is-negative { color: #dc2626; }.policy-result small { color: #64748b; font-size: .64rem; line-height: 1.4; }
 .event-chart-legend { display: flex; align-items: flex-start; gap: 7px; margin: 0 0 12px; color: #64748b; font-size: .7rem; line-height: 1.5; }.event-chart-legend span { display: inline-block; flex: 0 0 auto; width: 18px; margin-top: 5px; border-top: 2px dashed #2563eb; }
+.live-quote { margin: 0 0 12px; padding: 9px 11px; border-radius: 9px; color: #0f766e; background: #ecfdf5; font-size: .72rem; font-weight: 700; }.live-quote strong { margin-left: 4px; }.live-quote span { margin-left: 5px; color: #64748b; font-weight: 500; }
 svg { display: block; width: 100%; margin: 14px 0 2px; overflow: visible; }.baseline { stroke: #cbd5e1; stroke-width: 1.5; }.guide { stroke: #e2e8f0; stroke-dasharray: 4 5; }.price-label { fill: #334155; font-size: 11px; font-weight: 800; }.date-label { fill: #64748b; font-size: 10px; font-weight: 700; }.stage-label { fill: #94a3b8; font-size: 9px; }
 .reaction-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-top: 10px; }.reaction-metric { display: grid; gap: 3px; padding: 10px; border-radius: 10px; background: #fff; }.reaction-metric span { color: #64748b; font-size: .7rem; }.reaction-metric strong { color: #1e293b; font-size: .82rem; }.reaction-metric small { color: #047857; font-size: .7rem; font-weight: 800; }.reaction-metric small.is-negative { color: #dc2626; }.reaction-metric span:nth-last-child(-n + 2) { color: #94a3b8; font-size: .66rem; }.reaction-note { margin: 13px 0 0; color: #7c8da4; font-size: .72rem; line-height: 1.55; }
 @media (max-width: 520px) { .reaction-chart { padding: 15px; }.reaction-chart__header { display: grid; }.source-links { justify-items: start; }.policy-impact-card { grid-template-columns: 1fr; }.price-label { font-size: 9px; }.date-label { font-size: 8px; }.stage-label { font-size: 7px; } }

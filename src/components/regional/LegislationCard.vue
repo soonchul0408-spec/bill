@@ -1,14 +1,15 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import DataOriginBadge from '@/components/regional/DataOriginBadge.vue'
-import SourceMeta from '@/components/regional/SourceMeta.vue'
 
-defineProps({
+const props = defineProps({
   item: {
     type: Object,
     required: true,
   },
 })
+
+const emit = defineEmits(['select'])
 
 const router = useRouter()
 
@@ -82,10 +83,14 @@ function goToRelatedResearch(item) {
 function getResearchHint(stage) {
   return researchHints[stage] ?? researchHints.발의
 }
+
+function selectCard() {
+  emit('select', props.item)
+}
 </script>
 
 <template>
-  <el-card class="legislation-card" shadow="hover">
+  <el-card class="legislation-card" shadow="hover" role="button" tabindex="0" @click="selectCard" @keydown.enter="selectCard" @keydown.space.prevent="selectCard">
     <div class="card-kicker">
       <div class="kicker-left">
         <el-tag size="small" type="info" effect="plain">{{ item.recordType }}</el-tag>
@@ -111,23 +116,7 @@ function getResearchHint(stage) {
       <span>제안일 {{ item.proposedAt }}</span>
     </div>
 
-    <dl class="bill-details">
-      <div>
-        <dt>제안자</dt>
-        <dd>{{ item.proposer }}</dd>
-      </div>
-      <div>
-        <dt>소관기관</dt>
-        <dd>{{ item.responsibleOrg }}</dd>
-      </div>
-    </dl>
-
     <p class="card-description">{{ item.description }}</p>
-
-    <div class="stage-note">
-      <span>진행 단계 근거</span>
-      <p>{{ item.stageNote }}</p>
-    </div>
 
     <div class="research-hint" :class="`research-hint--${getResearchHint(item.stage).type}`">
       <span class="research-hint__icon">{{ getResearchHint(item.stage).icon }}</span>
@@ -138,18 +127,9 @@ function getResearchHint(stage) {
     </div>
 
     <div class="card-footer">
-      <SourceMeta :item="item" />
+      <span>클릭해서 상세 보기</span>
       <div class="card-actions">
-        <el-button size="small" plain @click="goToRelatedResearch(item)">유사 사례 보기</el-button>
-        <el-link
-          v-if="item.sourceUrl"
-          :href="item.sourceUrl"
-          target="_blank"
-          rel="noopener noreferrer"
-          type="primary"
-        >
-          공식 출처 ↗
-        </el-link>
+        <el-button size="small" plain @click.stop="goToRelatedResearch(item)">유사 사례 보기</el-button>
       </div>
     </div>
   </el-card>
@@ -161,7 +141,10 @@ function getResearchHint(stage) {
   border: 1px solid #e5eaf2;
   border-radius: 18px;
   background: #fff;
+  cursor: pointer;
 }
+
+.legislation-card:focus-visible { outline: 3px solid rgb(59 130 246 / 35%); outline-offset: 3px; }
 
 :deep(.legislation-card .el-card__body) {
   display: flex;
@@ -251,11 +234,10 @@ dd {
 }
 
 .card-description {
-  min-height: 4.2rem;
-  margin: 0;
+  margin: 16px 0 0;
   color: #5f6d83;
-  font-size: 0.9rem;
-  line-height: 1.7;
+  font-size: 0.84rem;
+  line-height: 1.6;
 }
 
 .stage-note {
@@ -311,9 +293,12 @@ dd {
 .research-hint p { margin: 3px 0 0; color: #64748b; font-size: .72rem; line-height: 1.5; }
 
 .card-footer {
-  align-items: flex-end;
+  align-items: center;
   margin-top: auto;
-  padding-top: 20px;
+  padding-top: 16px;
+  color: #64748b;
+  font-size: .72rem;
+  font-weight: 800;
 }
 
 .card-footer :deep(.el-link) {

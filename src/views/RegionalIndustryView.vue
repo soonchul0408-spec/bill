@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import ApiFallbackNotice from '@/components/regional/ApiFallbackNotice.vue'
 import DataOriginBadge from '@/components/regional/DataOriginBadge.vue'
 import RegionalInfoCard from '@/components/regional/RegionalInfoCard.vue'
@@ -9,6 +9,7 @@ import { useRegionalIndustryStore } from '@/stores/regionalIndustry'
 const selectedRegion = ref('전체')
 const selectedCategory = ref('전체')
 const selectedStage = ref('전체')
+const activeItemId = ref('')
 const analysisStore = useAnalysisStore()
 const dataStore = useRegionalIndustryStore()
 
@@ -22,6 +23,20 @@ const filteredItems = computed(() =>
     return matchesRegion && matchesCategory && matchesStage
   }),
 )
+
+const activeItem = computed(() =>
+  filteredItems.value.find((item) => item.id === activeItemId.value) ?? filteredItems.value[0],
+)
+
+watch(filteredItems, (items) => {
+  if (!items.some((item) => item.id === activeItemId.value)) {
+    activeItemId.value = items[0]?.id ?? ''
+  }
+}, { immediate: true })
+
+function selectItem(item) {
+  activeItemId.value = item.id
+}
 
 const activeRegionLabel = computed(() => {
   const region = dataStore.regionOptions.find((option) => option.value === selectedRegion.value)
@@ -164,8 +179,26 @@ onMounted(() => {
         </el-card>
       </div>
 
-      <div v-else-if="filteredItems.length" class="card-grid">
-        <RegionalInfoCard v-for="item in filteredItems" :key="item.id" :item="item" />
+      <div v-else-if="filteredItems.length" class="result-browser">
+        <div class="result-menu" aria-label="정책·사업 항목 선택">
+          <button
+            v-for="item in filteredItems"
+            :key="item.id"
+            type="button"
+            :class="{ 'result-menu__item--active': activeItem?.id === item.id }"
+            @click="selectItem(item)"
+          >
+            <span>{{ item.stage }} · {{ item.region }}</span>
+            <strong>{{ item.projectName }}</strong>
+          </button>
+        </div>
+        <div v-if="activeItem" class="selected-result">
+          <div class="selected-result__heading">
+            <span>SELECTED ITEM</span>
+            <small>목록에서 항목을 바꾸거나 아래 카드에서 상세 정보를 확인하세요.</small>
+          </div>
+          <RegionalInfoCard :item="activeItem" />
+        </div>
       </div>
 
       <el-empty
@@ -385,6 +418,8 @@ onMounted(() => {
   gap: 18px;
 }
 
+.result-browser { display: grid; grid-template-columns: minmax(240px, .72fr) minmax(0, 1.28fr); gap: 18px; align-items: start; }.result-menu { display: grid; gap: 8px; max-height: 540px; overflow: auto; padding-right: 4px; }.result-menu button { display: grid; gap: 5px; padding: 14px; border: 1px solid #e2e8f0; border-radius: 12px; color: #64748b; background: #fff; text-align: left; cursor: pointer; }.result-menu button:hover { border-color: #93c5fd; background: #f8fbff; }.result-menu .result-menu__item--active { border-color: #2563eb; background: #eff6ff; box-shadow: 0 5px 12px rgb(37 99 235 / 9%); }.result-menu span { color: #64748b; font-size: .68rem; font-weight: 800; }.result-menu strong { display: -webkit-box; overflow: hidden; color: #334155; font-size: .82rem; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }.selected-result { min-width: 0; }.selected-result__heading { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 10px; }.selected-result__heading span { color: #2563eb; font-size: .68rem; font-weight: 900; letter-spacing: .12em; }.selected-result__heading small { color: #94a3b8; font-size: .7rem; }
+
 .skeleton-card {
   min-height: 360px;
   border: 1px solid #e5eaf2;
@@ -435,9 +470,12 @@ onMounted(() => {
   }
 
   .filter-grid,
-  .card-grid {
+  .card-grid,
+  .result-browser {
     grid-template-columns: 1fr;
   }
+
+  .result-menu { grid-auto-flow: column; grid-template-rows: repeat(2, minmax(0, 1fr)); max-height: none; overflow-x: auto; padding-bottom: 4px; }.result-menu button { width: 210px; }.selected-result__heading { display: grid; }
 
   .section-heading {
     align-items: flex-start;

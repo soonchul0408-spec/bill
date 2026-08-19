@@ -3,7 +3,7 @@ import { XMLParser } from 'fast-xml-parser'
 
 const REQUEST_TIMEOUT_MS = 10000
 const DEFAULT_PAGE_SIZE = 100
-const ASSEMBLY_SOURCE_URL = 'https://www.data.go.kr/data/15126134/openapi.do'
+const ASSEMBLY_SOURCE_URL = 'https://opinion.lawmaking.go.kr/gcom/nsmLmSts/out'
 
 function createProviderError(code, message) {
   const error = new Error(message)
@@ -86,7 +86,7 @@ export async function fetchAssemblyBillPayload() {
     })
 
     return {
-      provider: '국회 국회사무처_의안정보 통합 API',
+      provider: '국민참여입법센터 국회입법현황',
       sourceUrl: ASSEMBLY_SOURCE_URL,
       retrievedAt: new Date().toISOString(),
       raw: parseResponseBody(response.data),

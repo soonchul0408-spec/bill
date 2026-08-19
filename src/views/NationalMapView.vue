@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import ApiFallbackNotice from '@/components/regional/ApiFallbackNotice.vue'
 import DataOriginBadge from '@/components/regional/DataOriginBadge.vue'
@@ -10,6 +10,7 @@ import { useNationalMapStore } from '@/stores/nationalMap'
 
 const router = useRouter()
 const mapStore = useNationalMapStore()
+const activeView = ref('map')
 
 const topRegions = computed(() =>
   [...mapStore.mapRegions]
@@ -25,6 +26,10 @@ function openRegion(regionId) {
 function handleRegionChange(regionId) {
   if (regionId === '전체') return
   openRegion(regionId)
+}
+
+function selectView(view) {
+  activeView.value = view
 }
 
 onMounted(() => {
@@ -68,7 +73,19 @@ onMounted(() => {
     </div>
 
     <template v-else>
-      <section class="map-layout">
+      <nav class="national-view-menu" aria-label="전국 지도 화면 메뉴">
+        <button type="button" :class="{ 'national-view-menu__item--active': activeView === 'map' }" @click="selectView('map')">
+          지도 보기
+        </button>
+        <button type="button" :class="{ 'national-view-menu__item--active': activeView === 'ranking' }" @click="selectView('ranking')">
+          지역 순위 <strong>상위 5</strong>
+        </button>
+        <button type="button" :class="{ 'national-view-menu__item--active': activeView === 'briefing' }" @click="selectView('briefing')">
+          통합 분석
+        </button>
+      </nav>
+
+      <section v-if="activeView === 'map'" class="map-layout map-layout--single">
         <el-card class="map-card" shadow="never">
           <NationalKoreaMap
             :regions="mapStore.mapRegions"
@@ -76,7 +93,9 @@ onMounted(() => {
             @select="openRegion"
           />
         </el-card>
+      </section>
 
+      <section v-else-if="activeView === 'ranking'" class="ranking-layout">
         <el-card class="rank-card" shadow="never">
           <template #header>
             <div class="card-header">
@@ -110,7 +129,7 @@ onMounted(() => {
         </el-card>
       </section>
 
-      <RegionalInsightPanel />
+      <RegionalInsightPanel v-else />
     </template>
   </div>
 </template>
@@ -220,6 +239,8 @@ onMounted(() => {
   margin-top: 28px;
 }
 
+.national-view-menu { display: flex; gap: 6px; margin-top: 24px; padding: 6px; border: 1px solid #dbe7f3; border-radius: 16px; background: #f8fbff; }.national-view-menu button { display: flex; flex: 1; align-items: center; justify-content: center; gap: 8px; padding: 12px; border: 0; border-radius: 11px; color: #64748b; background: transparent; font-size: .82rem; font-weight: 800; cursor: pointer; }.national-view-menu button strong { color: inherit; font-size: .7rem; }.national-view-menu button:hover { color: #1d4ed8; }.national-view-menu .national-view-menu__item--active { color: #fff; background: #1d4ed8; box-shadow: 0 5px 12px rgb(29 78 216 / 18%); }
+
 .map-layout,
 .loading-layout {
   display: grid;
@@ -227,6 +248,10 @@ onMounted(() => {
   gap: 22px;
   margin-top: 24px;
 }
+
+.map-layout--single { grid-template-columns: minmax(0, 1fr); }
+
+.ranking-layout { display: grid; max-width: 560px; margin: 24px auto 0; }
 
 .map-card,
 .rank-card,
@@ -342,5 +367,7 @@ onMounted(() => {
   .hero-summary {
     width: 100%;
   }
+
+  .national-view-menu { overflow-x: auto; }.national-view-menu button { flex: 0 0 auto; min-width: 126px; }
 }
 </style>

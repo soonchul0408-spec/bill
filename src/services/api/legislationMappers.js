@@ -4,7 +4,7 @@ import {
 } from '@/data/legislationData'
 import { DATA_ORIGINS, createSourceMetadata } from '@/data/sourceMetadata'
 
-const ASSEMBLY_SOURCE_URL = 'https://www.data.go.kr/data/15126134/openapi.do'
+const ASSEMBLY_SOURCE_URL = 'https://opinion.lawmaking.go.kr/gcom/nsmLmSts/out'
 const UNKNOWN_INDUSTRY_CATEGORY = '분류 미확인'
 
 const BILL_FIELDS = {
@@ -383,7 +383,7 @@ function normalizeBillRecord(record, index, metadata) {
   )
   const source = createSourceMetadata({
     provider: metadata.provider,
-    title: sourceUrl === ASSEMBLY_SOURCE_URL ? '국회 국회사무처 의안정보 통합 API' : '국회 의안 원문',
+    title: sourceUrl === ASSEMBLY_SOURCE_URL ? '국민참여입법센터 국회입법현황' : '국회 의안 원문',
     url: sourceUrl,
     publishedAt: proposedAt || null,
     verifiedAt,
@@ -443,7 +443,7 @@ export function normalizeLegislationSnapshot(payload) {
   const body = payload?.data ?? payload ?? {}
   const retrievedAt = body.retrievedAt ?? new Date().toISOString()
   const metadata = {
-    provider: body.provider ?? '국회 국회사무처_의안정보 통합 API',
+    provider: body.provider ?? '국민참여입법센터 국회입법현황',
     sourceUrl: body.sourceUrl ?? ASSEMBLY_SOURCE_URL,
     retrievedAt,
   }

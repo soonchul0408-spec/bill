@@ -1,6 +1,6 @@
 # 공개 API 프록시
 
-이 서버는 지방재정365 계약현황 API, 국회 의안정보 API, 금융감독원 OpenDART API의 인증키를 브라우저에 전달하지 않고 `/api` 경로로 공개자료를 중계합니다.
+이 서버는 지방재정365 세부사업별 세출현황 API, 국회 의안정보 API, 금융감독원 OpenDART API의 인증키를 브라우저에 전달하지 않고 `/api` 경로로 공개자료를 중계합니다.
 
 ## 로컬 실행 순서
 
@@ -9,7 +9,7 @@
 3. `npm run api`로 API 서버를 실행합니다.
 4. 별도 터미널에서 `npm run dev`를 실행합니다.
 
-`LOFIN_CONTRACT_API_URL`은 공공데이터포털의 「행정안전부_지방재정365_계약현황」 활용 안내서에서 확인한 원천 API URL을 사용합니다. 서비스키는 `LOFIN_CONTRACT_API_KEY`에만 입력하며, Vue 번들에는 포함하지 않습니다.
+지방재정365 세부사업별 세출현황은 `LOFIN_EXPENDITURE_API_KEY`만 `.env.local`에 입력합니다. API 주소와 `Key`, `Type`, `pIndex`, `pSize`, `fyr`, `exe_ymd` 요청값은 서버가 처리하며, 인증키는 Vue 번들에 포함되지 않습니다. 조회 기준은 필요하면 `LOFIN_EXPENDITURE_YEAR`, `LOFIN_EXPENDITURE_DATE`로 지정합니다.
 
 국회 의안정보 API는 공공데이터포털의 「국회 국회사무처_의안정보 통합 API」 활용신청 후 연결된 공식 XML API URL을 `ASSEMBLY_BILL_API_URL`에 입력합니다. 서비스키는 `ASSEMBLY_BILL_API_KEY`에만 입력하고 `ASSEMBLY_BILL_KEY_PARAM`은 해당 API 가이드의 키 파라미터 이름에 맞춥니다. 국회 API 응답은 서버에서 XML을 변환한 뒤 브라우저에 전달합니다.
 

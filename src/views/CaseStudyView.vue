@@ -7,6 +7,7 @@ import ResearchChecklist from '@/components/research/ResearchChecklist.vue'
 import ResearchJournal from '@/components/research/ResearchJournal.vue'
 import { useAnalysisStore } from '@/stores/analysis'
 import { CASE_STUDIES } from '@/data/caseStudies'
+import { fetchLatestStockPrice } from '@/services/api/stockPriceService'
 
 const route = useRoute()
 const router = useRouter()
@@ -16,6 +17,8 @@ const selectedCategory = computed(() => String(route.query.category ?? '전체')
 const selectedRegion = computed(() => String(route.query.region ?? '전체'))
 const selectedCaseId = computed(() => String(route.params.id ?? route.query.case ?? ''))
 const activeStudyId = ref(selectedCaseId.value)
+const activeDetailTab = ref('market')
+const liveQuote = ref(null)
 const isDetailPage = computed(() => Boolean(route.params.id))
 
 const filteredStudies = computed(() =>
@@ -37,6 +40,11 @@ const appliedFilterLabel = computed(() => {
 const activeStudy = computed(
   () => filteredStudies.value.find((study) => study.id === activeStudyId.value) ?? filteredStudies.value[0],
 )
+const activeMarket = computed(() =>
+  activeStudy.value?.market
+    ? { ...activeStudy.value.market, ...(liveQuote.value ? { liveQuote: liveQuote.value } : {}) }
+    : null,
+)
 
 watch(
   filteredStudies,
@@ -54,9 +62,27 @@ watch(selectedCaseId, (caseId) => {
   }
 })
 
+watch(activeStudy, (study) => {
+  activeDetailTab.value = study?.market ? 'market' : 'policy'
+  liveQuote.value = null
+  if (study?.market?.stockCode) {
+    fetchLatestStockPrice(study.market.stockCode)
+      .then((quote) => {
+        if (quote.stockCode === study.market.stockCode) liveQuote.value = quote
+      })
+      .catch(() => {
+        liveQuote.value = null
+      })
+  }
+}, { immediate: true })
+
 function selectStudy(study) {
   activeStudyId.value = study.id
   router.push({ name: 'case-study-detail', params: { id: study.id } })
+}
+
+function selectDetailTab(tab) {
+  activeDetailTab.value = tab
 }
 
 function clearFilters() {
@@ -207,73 +233,84 @@ function getMarketObservationCount(study) {
           </div>
         </section>
 
-        <ResearchJournal :case-id="study.id" />
+        <nav class="detail-menu" aria-label="케이스 스터디 정보 메뉴">
+          <button
+            v-if="study.market"
+            type="button"
+            :class="{ 'detail-menu__item--active': activeDetailTab === 'market' }"
+            @click="selectDetailTab('market')"
+          >정책 · 주가</button>
+          <button type="button" :class="{ 'detail-menu__item--active': activeDetailTab === 'policy' }" @click="selectDetailTab('policy')">정책 타임라인</button>
+          <button type="button" :class="{ 'detail-menu__item--active': activeDetailTab === 'company' }" @click="selectDetailTab('company')">기업 근거</button>
+          <button type="button" :class="{ 'detail-menu__item--active': activeDetailTab === 'signal' }" @click="selectDetailTab('signal')">검토 신호</button>
+          <button type="button" :class="{ 'detail-menu__item--active': activeDetailTab === 'note' }" @click="selectDetailTab('note')">내 노트</button>
+        </nav>
 
-        <section v-if="study.market" class="market-section">
-          <div class="block-title">
-            <span>단계별 주가 흐름</span>
-            <small>사건일 종가 · 이후 5·20거래일 변화</small>
+        <section v-if="activeDetailTab === 'market' && study.market" class="market-section">
+          <div class="detail-tab-heading">
+            <div>
+              <span>POLICY × MARKET</span>
+              <h4>정책 단계와 주가 반응 비교</h4>
+            </div>
+            <small>사건일 종가 · 이후 5·20거래일 · KOSPI 대비</small>
           </div>
-          <ResearchSignalBoard :signals="study.signals" />
-          <ResearchChecklist :case-id="study.id" :has-direct-company="study.companies.length > 0" />
-          <EventReactionChart :market="study.market" :events="study.events" />
+          <EventReactionChart :market="activeMarket" :events="study.events" />
         </section>
 
-        <section v-else class="no-market-data">
+        <section v-else-if="activeDetailTab === 'policy'" class="detail-panel">
+          <div class="block-title">
+            <span>정책·사업 이벤트</span>
+            <small>공식 출처 연결</small>
+          </div>
+          <ol class="event-list">
+            <li v-for="event in study.events" :key="`${study.id}-${event.date}-${event.stage}`">
+              <time>{{ event.date }}</time>
+              <div>
+                <el-tag size="small" type="info" effect="plain">{{ event.stage }}</el-tag>
+                <a :href="event.sourceUrl" target="_blank" rel="noopener noreferrer">{{ event.title }} ↗</a>
+              </div>
+            </li>
+          </ol>
+        </section>
+
+        <section v-else-if="activeDetailTab === 'company'" class="detail-panel">
+          <div class="block-title">
+            <span>함께 공부할 기업</span>
+            <small>근거가 없으면 목록에 넣지 않습니다</small>
+          </div>
+          <div v-if="study.companies.length" class="company-list">
+            <div v-for="company in study.companies" :key="company.code" class="company-row">
+              <div>
+                <strong>{{ company.name }}</strong>
+                <small>종목코드 {{ company.code }}</small>
+              </div>
+              <div class="company-actions">
+                <el-tag :type="company.relationType" effect="plain">{{ company.relation }}</el-tag>
+                <a v-if="company.sourceUrl" :href="company.sourceUrl" target="_blank" rel="noopener noreferrer" class="company-source">근거 ↗</a>
+                <a :href="dartSearchUrl(company.name)" target="_blank" rel="noopener noreferrer" class="company-disclosure">공시 ↗</a>
+                <el-button size="small" plain @click="analysisStore.toggleResearchCandidate(getCandidate(study, company))">
+                  {{ analysisStore.isResearchCandidateSaved(getCandidate(study, company).id) ? '공부 목록에서 빼기' : '공부 목록 담기' }}
+                </el-button>
+              </div>
+              <p>{{ company.basis }}</p>
+            </div>
+          </div>
+          <el-empty v-else :image-size="56" description="직접 참여가 확인된 상장기업이 없어 목록을 만들지 않습니다." />
+        </section>
+
+        <section v-else-if="activeDetailTab === 'signal'" class="detail-panel">
           <ResearchSignalBoard :signals="study.signals" />
-          <ResearchChecklist :case-id="study.id" :has-direct-company="false" />
-          <el-alert type="info" :closable="false" show-icon>
+          <ResearchChecklist :case-id="study.id" :has-direct-company="study.companies.length > 0" />
+          <el-alert v-if="!study.market" type="info" :closable="false" show-icon>
             <template #title>직접 참여가 확인된 상장기업이 없어 주가 차트를 제공하지 않습니다.</template>
             <p>법안·사업의 존재만으로 관련 종목을 만들지 않는 대조 사례입니다.</p>
           </el-alert>
         </section>
 
-        <div class="study-card__content">
-          <section>
-            <div class="block-title">
-              <span>정책·사업 이벤트</span>
-              <small>공식 출처 연결</small>
-            </div>
-            <ol class="event-list">
-              <li v-for="event in study.events" :key="`${study.id}-${event.date}-${event.stage}`">
-                <time>{{ event.date }}</time>
-                <div>
-                  <el-tag size="small" type="info" effect="plain">{{ event.stage }}</el-tag>
-                  <a :href="event.sourceUrl" target="_blank" rel="noopener noreferrer">{{ event.title }} ↗</a>
-                </div>
-              </li>
-            </ol>
-          </section>
+        <section v-else class="detail-panel">
+          <ResearchJournal :case-id="study.id" />
+        </section>
 
-          <section>
-            <div class="block-title">
-              <span>함께 공부할 기업</span>
-              <small>근거가 없으면 목록에 넣지 않습니다</small>
-            </div>
-            <div v-if="study.companies.length" class="company-list">
-              <div v-for="company in study.companies" :key="company.code" class="company-row">
-                <div>
-                  <strong>{{ company.name }}</strong>
-                  <small>종목코드 {{ company.code }}</small>
-                </div>
-                <div class="company-actions">
-                  <el-tag :type="company.relationType" effect="plain">{{ company.relation }}</el-tag>
-                  <a v-if="company.sourceUrl" :href="company.sourceUrl" target="_blank" rel="noopener noreferrer" class="company-source">근거 ↗</a>
-                  <a :href="dartSearchUrl(company.name)" target="_blank" rel="noopener noreferrer" class="company-disclosure">공시 ↗</a>
-                  <el-button size="small" plain @click="analysisStore.toggleResearchCandidate(getCandidate(study, company))">
-                    {{ analysisStore.isResearchCandidateSaved(getCandidate(study, company).id) ? '공부 목록에서 빼기' : '공부 목록 담기' }}
-                  </el-button>
-                </div>
-                <p>{{ company.basis }}</p>
-              </div>
-            </div>
-            <el-empty
-              v-else
-              :image-size="56"
-              description="직접 참여가 확인된 상장기업이 없어 목록을 만들지 않습니다."
-            />
-          </section>
-        </div>
       </article>
     </section>
   </div>
@@ -295,9 +332,8 @@ function getMarketObservationCount(study) {
 .method-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 24px 0 48px; }.method-grid article { padding: 22px; border: 1px solid #e2e8f0; border-radius: 16px; background: #fff; }.method-number { display: block; margin-bottom: 16px; color: #2563eb; font-size: .72rem; font-weight: 800; letter-spacing: .12em; }.method-grid strong { color: #172033; }.method-grid p { margin: 8px 0 0; color: #64748b; font-size: .86rem; line-height: 1.6; }
 .evidence-coverage { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0 0 20px; }.evidence-coverage > div { display: grid; gap: 4px; padding: 14px; border: 1px solid #dbe7f3; border-radius: 12px; background: #f8fbff; }.evidence-coverage small { color: #64748b; font-size: .7rem; font-weight: 800; }.evidence-coverage strong { color: #1e3a5f; font-size: 1.25rem; letter-spacing: -.05em; }.evidence-coverage span { color: #94a3b8; font-size: .68rem; line-height: 1.4; }
 .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 20px; }.section-eyebrow { color: #2563eb; }.section-heading h2 { margin: 0; color: #172033; font-size: 1.55rem; letter-spacing: -.05em; }
-.study-section { display: grid; gap: 20px; }.study-selector { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }.study-selector__item { display: grid; gap: 7px; min-height: 118px; padding: 18px; border: 1px solid #dce5f0; border-radius: 16px; color: #64748b; background: #fff; text-align: left; cursor: pointer; }.study-selector__item:hover { border-color: #93c5fd; }.study-selector__item--active { border-color: #2563eb; background: #eff6ff; box-shadow: 0 8px 18px rgb(37 99 235 / 10%); }.study-selector__item span { color: #64748b; font-size: .68rem; font-weight: 800; }.study-selector__item strong { color: #1e293b; font-size: .92rem; line-height: 1.35; }.study-selector__item small { color: #0f766e; font-size: .7rem; font-weight: 800; }.study-card { padding: 30px; border: 1px solid #e2e8f0; border-radius: 20px; background: #fff; box-shadow: 0 8px 18px rgb(15 23 42 / 3%); }.study-card__header { display: flex; justify-content: space-between; gap: 24px; }.study-card__meta { display: flex; align-items: center; gap: 10px; color: #64748b; font-size: .8rem; }.study-card h3 { margin: 14px 0 8px; color: #172033; font-size: 1.36rem; letter-spacing: -.045em; }.study-card__header p { max-width: 800px; margin: 0; color: #64748b; font-size: .9rem; line-height: 1.65; }.study-card__status { display: grid; align-content: start; justify-items: end; gap: 9px; min-width: 145px; }.study-card__status small { color: #94a3b8; font-size: .75rem; }.research-question { display: grid; gap: 5px; margin: 24px 0; padding: 15px 18px; border-radius: 12px; background: #f0fdfb; }.research-question span { color: #0f766e; font-size: .72rem; font-weight: 800; }.research-question strong { color: #1f3a37; font-size: .9rem; line-height: 1.6; }.study-card__content { display: grid; grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); gap: 28px; }.block-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }.block-title span { color: #334155; font-size: .86rem; font-weight: 800; }.block-title small { color: #94a3b8; font-size: .72rem; }.event-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }.event-list li { display: grid; grid-template-columns: 86px 1fr; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid #eef2f7; }.event-list time { color: #64748b; font-size: .78rem; font-weight: 700; }.event-list li > div { display: grid; justify-items: start; gap: 7px; }.event-list a { color: #334155; font-size: .84rem; font-weight: 700; line-height: 1.45; }.company-list { display: grid; gap: 10px; }.company-row { display: grid; grid-template-columns: 1fr auto; gap: 5px 12px; padding: 13px; border-radius: 12px; background: #f8fafc; }.company-row > div { display: grid; gap: 2px; }.company-row strong { color: #1e293b; font-size: .88rem; }.company-row small { color: #94a3b8; font-size: .72rem; }.company-row p { grid-column: 1 / -1; margin: 4px 0 0; color: #64748b; font-size: .78rem; line-height: 1.55; }.company-actions { display: flex !important; align-items: center; justify-content: end; gap: 8px; }
-.market-section { margin: 0 0 24px; }.no-market-data { margin: 0 0 24px; }.no-market-data p { margin: 6px 0 0; line-height: 1.55; }
+.study-section { display: grid; gap: 20px; }.study-selector { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }.study-selector__item { display: grid; gap: 7px; min-height: 118px; padding: 18px; border: 1px solid #dce5f0; border-radius: 16px; color: #64748b; background: #fff; text-align: left; cursor: pointer; }.study-selector__item:hover { border-color: #93c5fd; }.study-selector__item--active { border-color: #2563eb; background: #eff6ff; box-shadow: 0 8px 18px rgb(37 99 235 / 10%); }.study-selector__item span { color: #64748b; font-size: .68rem; font-weight: 800; }.study-selector__item strong { color: #1e293b; font-size: .92rem; line-height: 1.35; }.study-selector__item small { color: #0f766e; font-size: .7rem; font-weight: 800; }.study-card { padding: 30px; border: 1px solid #e2e8f0; border-radius: 20px; background: #fff; box-shadow: 0 8px 18px rgb(15 23 42 / 3%); }.study-card__header { display: flex; justify-content: space-between; gap: 24px; }.study-card__meta { display: flex; align-items: center; gap: 10px; color: #64748b; font-size: .8rem; }.study-card h3 { margin: 14px 0 8px; color: #172033; font-size: 1.36rem; letter-spacing: -.045em; }.study-card__header p { max-width: 800px; margin: 0; color: #64748b; font-size: .9rem; line-height: 1.65; }.study-card__status { display: grid; align-content: start; justify-items: end; gap: 9px; min-width: 145px; }.study-card__status small { color: #94a3b8; font-size: .75rem; }.research-question { display: grid; gap: 5px; margin: 24px 0; padding: 15px 18px; border-radius: 12px; background: #f0fdfb; }.research-question span { color: #0f766e; font-size: .72rem; font-weight: 800; }.research-question strong { color: #1f3a37; font-size: .9rem; line-height: 1.6; }.detail-menu { display: flex; gap: 4px; overflow-x: auto; margin: 24px 0 18px; padding: 5px; border: 1px solid #dce8f5; border-radius: 14px; background: #f8fbff; }.detail-menu button { flex: 0 0 auto; padding: 10px 14px; border: 0; border-radius: 9px; color: #64748b; background: transparent; font-size: .78rem; font-weight: 800; cursor: pointer; }.detail-menu button:hover { color: #1d4ed8; }.detail-menu .detail-menu__item--active { color: #fff; background: #1d4ed8; box-shadow: 0 4px 10px rgb(29 78 216 / 18%); }.detail-panel, .market-section { min-height: 310px; padding: 22px; border: 1px solid #dce8f5; border-radius: 16px; background: #fff; }.detail-tab-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin: 0 0 16px; }.detail-tab-heading div { display: grid; gap: 4px; }.detail-tab-heading span { color: #2563eb; font-size: .68rem; font-weight: 900; letter-spacing: .12em; }.detail-tab-heading h4 { margin: 0; color: #172554; font-size: 1.05rem; letter-spacing: -.04em; }.detail-tab-heading > small { color: #94a3b8; font-size: .72rem; }.block-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }.block-title span { color: #334155; font-size: .86rem; font-weight: 800; }.block-title small { color: #94a3b8; font-size: .72rem; }.event-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }.event-list li { display: grid; grid-template-columns: 86px 1fr; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid #eef2f7; }.event-list time { color: #64748b; font-size: .78rem; font-weight: 700; }.event-list li > div { display: grid; justify-items: start; gap: 7px; }.event-list a { color: #334155; font-size: .84rem; font-weight: 700; line-height: 1.45; }.company-list { display: grid; gap: 10px; }.company-row { display: grid; grid-template-columns: 1fr auto; gap: 5px 12px; padding: 13px; border-radius: 12px; background: #f8fafc; }.company-row > div { display: grid; gap: 2px; }.company-row strong { color: #1e293b; font-size: .88rem; }.company-row small { color: #94a3b8; font-size: .72rem; }.company-row p { grid-column: 1 / -1; margin: 4px 0 0; color: #64748b; font-size: .78rem; line-height: 1.55; }.company-actions { display: flex !important; align-items: center; justify-content: end; gap: 8px; }
 .company-source, .company-disclosure { color: #2563eb; font-size: .72rem; font-weight: 800; white-space: nowrap; }.company-disclosure { color: #7c3aed; }
-@media (max-width: 760px) { .case-study-page { padding: 28px 18px 60px; }.case-hero, .study-card__header { display: grid; padding: 30px 24px; }.hero-stat, .study-card__status { justify-items: start; }.method-grid, .study-card__content, .study-selector { grid-template-columns: 1fr; }.section-heading { align-items: start; display: grid; }.study-card { padding: 22px; } }
+@media (max-width: 760px) { .case-study-page { padding: 28px 18px 60px; }.case-hero, .study-card__header { display: grid; padding: 30px 24px; }.hero-stat, .study-card__status { justify-items: start; }.method-grid, .study-selector { grid-template-columns: 1fr; }.section-heading, .detail-tab-heading { align-items: start; display: grid; }.study-card { padding: 22px; }.detail-panel, .market-section { padding: 16px; } }
 @media (max-width: 520px) { .evidence-coverage { grid-template-columns: 1fr; } }
 </style>
